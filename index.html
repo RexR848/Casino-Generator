@@ -269,59 +269,64 @@
       document.getElementById('quickGenerationPopup').style.display = 'flex';
     }
 
-    function processQuickGeneration() {
-      const inputText = document.getElementById('quickGenerationText').value;
-      const itemRegex = /(\d+)\s*:\s*([a-zA-Z0-9_\.]+\.mcfunction)/g;
-      const percentageRegex = /(\d+)\s*:\s*(\d{1,3})/g;
+function processQuickGeneration() {
+  const inputText = document.getElementById('quickGenerationText').value;
+  const itemRegex = /(\d+)\s*:\s*([a-zA-Z0-9_\.]+\.mcfunction)/g;
+  const percentageRegex = /(\d+)\s*:\s*(\d{1,3}(?:\.\d+)?)/g;
 
-      let itemMatches = [];
-      let percentageMatches = [];
-      
-      let itemMatch;
-      while ((itemMatch = itemRegex.exec(inputText)) !== null) {
-        itemMatches.push(itemMatch[2]);
-      }
+  let itemMatches = [];
+  let percentageMatches = [];
+  
+  let hasDecimal = false;
+  let itemMatch;
+  while ((itemMatch = itemRegex.exec(inputText)) !== null) {
+    itemMatches.push(itemMatch[2]);
+  }
 
-      let percentageMatch;
-      while ((percentageMatch = percentageRegex.exec(inputText)) !== null) {
-        percentageMatches.push(parseInt(percentageMatch[2]));
-      }
+  let percentageMatch;
+  while ((percentageMatch = percentageRegex.exec(inputText)) !== null) {
+    const probText = percentageMatch[2];
+    const prob = parseFloat(probText);
+    percentageMatches.push(prob);
+    if (probText.includes(".")) hasDecimal = true;
+  }
 
-      if (itemMatches.length !== percentageMatches.length) {
-        alert("Los números de ítems y porcentajes no coinciden.");
-        return;
-      }
+  if (itemMatches.length !== percentageMatches.length) {
+    alert("Los números de ítems y porcentajes no coinciden.");
+    return;
+  }
 
-      let result = [];
-      let totalProbability = 0;
-      for (let i = 0; i < itemMatches.length; i++) {
-        const func = itemMatches[i];
-        const prob = percentageMatches[i];
-        
-        totalProbability += prob;
+  let result = [];
+  let totalProbability = percentageMatches.reduce((a, b) => a + b, 0);
+  if (totalProbability > 100) {
+    alert("La suma de los porcentajes no puede superar el 100%");
+    return;
+  }
+  if (totalProbability !== 100) {
+    alert("La suma de los porcentajes debe ser exactamente 100%");
+    return;
+  }
 
-        if (totalProbability > 100) {
-          alert("La suma de los porcentajes no puede superar el 100%");
-          return;
-        }
+  const totalLines = hasDecimal ? 1000 : 100;
 
-        for (let j = 0; j < prob; j++) {
-          result.push(`execute as @a[scores={numcasino=${i + 1}}] at @s run function ${func}`);
-        }
-      }
+  for (let i = 0; i < itemMatches.length; i++) {
+    const func = itemMatches[i];
+    const prob = percentageMatches[i];
+    const count = Math.round((prob / 100) * totalLines);
 
-      if (totalProbability !== 100) {
-        alert("La suma de los porcentajes debe ser exactamente 100%");
-        return;
-      }
-
-      // Descargar el archivo generado directamente
-      const blob = new Blob([result.join("\n")], { type: "text/plain" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "random.mcfunction";
-      link.click();
+    for (let j = 0; j < count; j++) {
+      result.push(`execute as @a[scores={numcasino=${i + 1}}] at @s run function ${func}`);
     }
+  }
+
+  const output = result.join("\n");
+  const blob = new Blob([output], { type: "text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "random.mcfunction";
+  link.click();
+}
+
 
     document.getElementById("items").addEventListener("input", updateItemList);
     updateItemList(); // Inicializa la lista de ítems
