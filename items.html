@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Comandos Minecraft - Avanzado</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-right: 10px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    pre {
+      background-color: #f4f4f4;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 1rem;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .checkbox-group {
+      margin-top: 20px;
+    }
+
+    .advanced-options {
+      margin-top: 20px;
+      background-color: #f8f8f8;
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
+    <button onclick="window.location.href='index.html'" style="margin-right: 5px;">volver</button>
+  </div>
+  <div class="container">
+    <h1>Generador de Comandos Minecraft - Avanzado</h1>
+    
+    <!-- Text Output (tellraw) -->
+    <label for="textInput">Texto para el comando tellraw:</label>
+    <input type="text" id="textInput" placeholder="Escribe el texto aquí (Ej: No has ganado nada )" />
+
+    <!-- Avanzado: Activar línea completa rawtext -->
+    <div class="checkbox-group">
+      <label for="advancedRawtext">¿Agregar línea completa de rawtext? (Avanzado)</label>
+      <input type="checkbox" id="advancedRawtext" />
+    </div>
+
+    <!-- Give Item -->
+    <label for="itemInput">ID del ítem para el comando give:</label>
+    <input type="text" id="itemInput" placeholder="Ej: air, dirt, potion" />
+    
+    <label for="quantityInput">Cantidad del ítem:</label>
+    <input type="number" id="quantityInput" value="1" min="1" />
+
+    <!-- Sonido (Opcional) -->
+    <div class="checkbox-group">
+      <label for="soundCheckbox">¿Agregar sonido?</label>
+      <input type="checkbox" id="soundCheckbox" />
+    </div>
+
+    <div id="soundInputContainer" style="display: none;">
+      <label for="soundInput">ID del sonido:</label>
+      <input type="text" id="soundInput" placeholder="Ej: mob.armor_stand.break" />
+    </div>
+
+    <!-- Agregar líneas extra -->
+    <div class="checkbox-group">
+      <label for="extraLinesCheckbox">¿Agregar líneas extra?</label>
+      <input type="checkbox" id="extraLinesCheckbox" />
+    </div>
+
+    <div id="extraLinesContainer" style="display: none;">
+      <label for="extraLinesInput">Ingrese las líneas extra:</label>
+      <textarea id="extraLinesInput" rows="5" placeholder="Agrega comandos o efectos adicionales aquí..."></textarea>
+    </div>
+
+    <button onclick="generateCommand()">Generar Comando</button>
+    <button id="downloadBtn" onclick="downloadCommand()" style="background-color: #2196F3; margin-left: 10px;">Descargar Comando</button>
+    
+    <h2>Comando Generado:</h2>
+    <pre id="output"></pre>
+  </div>
+
+  <script>
+    // Controlar la visibilidad de las opciones avanzadas
+    document.getElementById("advancedRawtext").addEventListener("change", function() {
+      const isChecked = this.checked;
+      document.getElementById("textInput").disabled = isChecked;
+    });
+
+    // Mostrar u ocultar opciones de sonido
+    document.getElementById("soundCheckbox").addEventListener("change", function() {
+      const soundInputContainer = document.getElementById("soundInputContainer");
+      soundInputContainer.style.display = this.checked ? "block" : "none";
+    });
+
+    // Mostrar u ocultar opciones de líneas extra
+    document.getElementById("extraLinesCheckbox").addEventListener("change", function() {
+      const extraLinesContainer = document.getElementById("extraLinesContainer");
+      extraLinesContainer.style.display = this.checked ? "block" : "none";
+    });
+
+    function generateCommand() {
+      const textInput = document.getElementById("textInput").value.trim();
+      const itemInput = document.getElementById("itemInput").value.trim();
+      const quantityInput = document.getElementById("quantityInput").value;
+      const soundCheckbox = document.getElementById("soundCheckbox").checked;
+      const soundInput = document.getElementById("soundInput").value.trim();
+      const extraLinesCheckbox = document.getElementById("extraLinesCheckbox").checked;
+      const extraLinesInput = document.getElementById("extraLinesInput").value.trim();
+      const advancedRawtext = document.getElementById("advancedRawtext").checked;
+
+      let command = "";
+
+      // Comando tellraw
+      if (advancedRawtext) {
+        command += `tellraw @s {"rawtext":[{"text":"${textInput}"}]}\n`;
+      } else {
+        command += `tellraw @s {"rawtext":[{"text":"${textInput}"}]}\n`;
+      }
+
+      // Comando give
+      command += `give @s ${itemInput} ${quantityInput}\n`;
+
+      // Comando playsound (si aplica)
+      if (soundCheckbox && soundInput) {
+        command += `playsound ${soundInput} @a ~ ~ ~\n`;
+      }
+
+      // Líneas extra (si aplica)
+      if (extraLinesCheckbox && extraLinesInput) {
+        command += `${extraLinesInput}\n`;
+      }
+
+      document.getElementById("output").textContent = command;
+
+      // Establecer el nombre del archivo para la descarga
+      const fileName = `${itemInput}_${quantityInput}.mcfunction`;
+      document.getElementById("downloadBtn").setAttribute("data-filename", fileName);
+    }
+
+    function downloadCommand() {
+      const command = document.getElementById("output").textContent;
+      const fileName = document.getElementById("downloadBtn").getAttribute("data-filename");
+
+      const blob = new Blob([command], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+    }
+  </script>
+</body>
+</html>

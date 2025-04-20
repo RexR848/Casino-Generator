@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Exportar Addon</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 0;
+    }
+
+    .top-right-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .button {
+      padding: 8px 14px;
+      text-decoration: none;
+      background-color: #3498db;
+      color: white;
+      border-radius: 5px;
+      transition: background-color 0.2s ease;
+    }
+
+    .button:hover {
+      background-color: #2980b9;
+    }
+
+    main {
+      margin-top: 30px;
+    }
+
+    input[type="file"] {
+      display: block;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #2ecc71;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #27ae60;
+    }
+
+    #statusMessage {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Exportar Addon</h1>
+    <div class="top-right-buttons">
+      <a href="index.html" class="button">Inicio</a>
+      <a href="items.html" class="button">Items</a>
+    </div>
+  </header>
+
+  <main>
+    <h2>Sube tus archivos de funciones</h2>
+    <input type="file" id="fileInput" multiple accept=".mcfunction" />
+    <button id="generateZip">Generar .ZIP</button>
+    <p id="statusMessage"></p>
+  </main>
+
+  <!-- JSZip desde CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  
+  <!-- Script embebido -->
+  <script>
+    document.getElementById('generateZip').addEventListener('click', async () => {
+      const input = document.getElementById('fileInput');
+      const status = document.getElementById('statusMessage');
+
+      if (input.files.length === 0) {
+        status.textContent = "Por favor selecciona al menos un archivo .mcfunction.";
+        return;
+      }
+
+      status.textContent = "Generando archivo .zip...";
+
+      const zip = new JSZip();
+      const addonFolder = zip.folder("mi_addon");
+      const functionsFolder = addonFolder.folder("functions");
+
+      for (const file of input.files) {
+        const content = await file.text();
+        functionsFolder.file(file.name, content);
+      }
+
+      const uuidv4 = () => crypto.randomUUID();
+
+      const manifest = {
+        format_version: 2,
+        header: {
+          name: "Mi Addon de Funciones",
+          description: "Addon exportado automáticamente.",
+          uuid: uuidv4(),
+          version: [1, 0, 0],
+          min_engine_version: [1, 16, 0]
+        },
+        modules: [
+          {
+            type: "data",
+            uuid: uuidv4(),
+            version: [1, 0, 0]
+          }
+        ]
+      };
+
+      addonFolder.file("manifest.json", JSON.stringify(manifest, null, 2));
+
+      zip.generateAsync({ type: "blob" }).then((content) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(content);
+        a.download = "mi_addon.zip";
+        a.click();
+        status.textContent = "¡Addon generado con éxito!";
+      }).catch(err => {
+        status.textContent = "Ocurrió un error al generar el ZIP.";
+        console.error(err);
+      });
+    });
+  </script>
+</body>
+</html>

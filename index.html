@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Comandos Minecraft</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-right: 10px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    pre {
+      background-color: #f4f4f4;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 1rem;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    #itemList {
+      margin-bottom: 20px;
+    }
+
+    .popup {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .popup-content {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      width: 80%;
+      max-width: 600px;
+    }
+
+    .popup button.close {
+      background-color: #f44336;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .percentage-list {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f8f8f8;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+
+    .percentage-item {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div style="position: fixed; top: 10px; right: 10px; z-index: 1000;">
+    <button onclick="window.location.href='items.html'" style="margin-right: 5px;">Cambiar a edicion de Items</button>
+  </div>
+
+  <div class="container">
+    <h1>Generador de Comandos Minecraft</h1>
+    
+    <label for="items">Número de Items:</label>
+    <input type="number" id="items" min="1" value="2">
+    
+    <div id="itemList"></div>
+    
+    <button onclick="generateLines()">Generar Líneas</button>
+    <button onclick="downloadFile()">Descargar archivo .mcfunction</button>
+    <button onclick="openFileUploadPopup()">Subir Archivos</button>
+    <button onclick="openQuickGenerationPopup()">Generación Rápida</button>
+    
+    <h2>Resultado:</h2>
+    <pre id="output"></pre>
+    
+    <h2>Lista de Porcentajes:</h2>
+    <div id="percentageList" class="percentage-list"></div>
+  </div>
+
+  <!-- Popup para subir archivos -->
+  <div id="fileUploadPopup" class="popup">
+    <div class="popup-content">
+      <h2>Subir Archivos</h2>
+      <input type="file" id="fileInput" multiple onchange="handleFileUpload(event)">
+      <button class="close" onclick="closePopup('fileUploadPopup')">Cerrar</button>
+      <h3>Archivos Subidos:</h3>
+      <ul id="fileList"></ul>
+    </div>
+  </div>
+
+  <!-- Popup para generación rápida -->
+  <div id="quickGenerationPopup" class="popup">
+    <div class="popup-content">
+      <h2>Generación Rápida</h2>
+      <textarea id="quickGenerationText" rows="10" style="width: 100%;" placeholder="Ejemplo de texto de generación rápida."></textarea>
+      <button onclick="processQuickGeneration()">Generar y Descargar</button>
+      <button class="close" onclick="closePopup('quickGenerationPopup')">Cerrar</button>
+    </div>
+  </div>
+
+  <script>
+    function updateItemList() {
+      const itemCount = document.getElementById("items").value;
+      const itemList = document.getElementById("itemList");
+      
+      itemList.innerHTML = ''; // Limpiar la lista de inputs previos
+
+      for (let i = 1; i <= itemCount; i++) {
+        const itemDiv = document.createElement("div");
+        itemDiv.classList.add("item-input");
+
+        itemDiv.innerHTML = `  
+          <label for="itemFunc${i}">Ítem ${i} - Función (rX):</label>
+          <input type="text" id="itemFunc${i}" placeholder="rX" />
+          <label for="prob${i}">Porcentaje de Aparición:</label>
+          <input type="number" id="prob${i}" min="0" max="100" placeholder="Porcentaje" />
+        `;
+        
+        itemList.appendChild(itemDiv);
+      }
+    }
+
+    function generateLines() {
+      const itemCount = document.getElementById("items").value;
+      let percentages = [];
+      let lines = [];
+
+      let hasDecimal = false;
+      let totalPercent = 0;
+
+      // Leer datos
+      for (let i = 1; i <= itemCount; i++) {
+        const func = document.getElementById(`itemFunc${i}`).value.trim();
+        const rawProb = document.getElementById(`prob${i}`).value.trim();
+        const prob = parseFloat(rawProb);
+
+        if (!func || isNaN(prob) || prob <= 0 || prob > 100) {
+          alert("Por favor, completa todos los campos correctamente con porcentajes entre 0 y 100.");
+          return;
+        }
+
+        if (rawProb.includes(".")) hasDecimal = true;
+
+        totalPercent += prob;
+        percentages.push({ func, prob, index: i });
+      }
+
+      if (totalPercent > 100) {
+        alert("La suma de los porcentajes no puede superar el 100%");
+        return;
+      }
+
+      if (totalPercent !== 100) {
+        alert("La suma de los porcentajes debe ser exactamente 100%");
+        return;
+      }
+
+      // Escalado dinámico
+      const totalLines = hasDecimal ? 1000 : 100;
+
+      // Generar líneas proporcionalmente
+      percentages.forEach(({ func, prob, index }) => {
+        const count = Math.round((prob / 100) * totalLines);
+        for (let j = 0; j < count; j++) {
+          lines.push(`execute as @a[scores={numcasino=${index}}] at @s run function ${func}`);
+        }
+      });
+
+      document.getElementById("output").textContent = lines.join("\n");
+
+      const percentageList = document.getElementById("percentageList");
+      percentageList.innerHTML = percentages
+        .map(({ func, prob }) => `<div class="percentage-item">(${func}) - ${prob}%</div>`)
+        .join('');
+    }
+
+
+    function downloadFile() {
+      const output = document.getElementById("output").textContent;
+      
+      if (!output) {
+        alert("Primero genera las líneas de comando.");
+        return;
+      }
+
+      const blob = new Blob([output], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "comandos.mcfunction";
+      link.click();
+    }
+
+    function openFileUploadPopup() {
+      document.getElementById('fileUploadPopup').style.display = 'flex';
+    }
+
+    function closePopup(popupId) {
+      document.getElementById(popupId).style.display = 'none';
+    }
+
+    function handleFileUpload(event) {
+      const files = event.target.files;
+      const fileList = document.getElementById("fileList");
+      fileList.innerHTML = ''; // Limpiar la lista de archivos previos
+
+      for (let i = 0; i < files.length; i++) {
+        const listItem = document.createElement("li");
+        listItem.textContent = files[i].name;
+        fileList.appendChild(listItem);
+      }
+    }
+
+    function openQuickGenerationPopup() {
+      document.getElementById('quickGenerationPopup').style.display = 'flex';
+    }
+
+    function processQuickGeneration() {
+      const inputText = document.getElementById('quickGenerationText').value;
+      const itemRegex = /(\d+)\s*:\s*([a-zA-Z0-9_\.]+\.mcfunction)/g;
+      const percentageRegex = /(\d+)\s*:\s*(\d{1,3})/g;
+
+      let itemMatches = [];
+      let percentageMatches = [];
+      
+      let itemMatch;
+      while ((itemMatch = itemRegex.exec(inputText)) !== null) {
+        itemMatches.push(itemMatch[2]);
+      }
+
+      let percentageMatch;
+      while ((percentageMatch = percentageRegex.exec(inputText)) !== null) {
+        percentageMatches.push(parseInt(percentageMatch[2]));
+      }
+
+      if (itemMatches.length !== percentageMatches.length) {
+        alert("Los números de ítems y porcentajes no coinciden.");
+        return;
+      }
+
+      let result = [];
+      let totalProbability = 0;
+      for (let i = 0; i < itemMatches.length; i++) {
+        const func = itemMatches[i];
+        const prob = percentageMatches[i];
+        
+        totalProbability += prob;
+
+        if (totalProbability > 100) {
+          alert("La suma de los porcentajes no puede superar el 100%");
+          return;
+        }
+
+        for (let j = 0; j < prob; j++) {
+          result.push(`execute as @a[scores={numcasino=${i + 1}}] at @s run function ${func}`);
+        }
+      }
+
+      if (totalProbability !== 100) {
+        alert("La suma de los porcentajes debe ser exactamente 100%");
+        return;
+      }
+
+      // Descargar el archivo generado directamente
+      const blob = new Blob([result.join("\n")], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "comandos_rápidos.mcfunction";
+      link.click();
+    }
+
+    document.getElementById("items").addEventListener("input", updateItemList);
+    updateItemList(); // Inicializa la lista de ítems
+  </script>
+</body>
+</html>
