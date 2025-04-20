@@ -43,9 +43,20 @@
       margin-top: 30px;
     }
 
-    input[type="file"] {
+    input[type="file"],
+    input[type="text"],
+    input[type="number"],
+    label {
       display: block;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
+      padding: 8px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    input[type="checkbox"] {
+      width: auto;
+      margin-right: 5px;
     }
 
     button {
@@ -78,68 +89,119 @@
   </header>
 
   <main>
-    <h2>Sube tus archivos de funciones</h2>
-    <input type="file" id="fileInput" multiple accept=".mcfunction" />
+    <h2>Datos del Addon</h2>
+    <label>Nombre:</label>
+    <input type="text" id="addonName" value="Mi Addon de Funciones" />
+
+    <label>Descripción:</label>
+    <input type="text" id="addonDescription" value="Addon exportado automáticamente." />
+
+    <label>Versión (mayor):</label>
+    <input type="number" id="verMajor" value="1" min="0" />
+
+    <label>Versión (menor):</label>
+    <input type="number" id="verMinor" value="0" min="0" />
+
+    <label>Versión (parche):</label>
+    <input type="number" id="verPatch" value="0" min="0" />
+
+    <label>Ícono (pack_icon.png):</label>
+    <input type="file" id="iconInput" accept="image/png" />
+
+    <h2>Sube archivos .mcfunction y .mcstructure</h2>
+    <input type="file" id="fileInput" multiple accept=".mcfunction,.mcstructure" />
+
+    <label>
+      <input type="checkbox" id="includeStructures" />
+      Incluir carpeta de estructuras (mcstructure)
+    </label>
+
     <button id="generateZip">Generar .ZIP</button>
     <p id="statusMessage"></p>
   </main>
 
   <!-- JSZip desde CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  
-  <!-- Script embebido -->
-  <script>
-    document.getElementById('generateZip').addEventListener('click', async () => {
-      const input = document.getElementById('fileInput');
-      const status = document.getElementById('statusMessage');
 
-      if (input.files.length === 0) {
-        status.textContent = "Por favor selecciona al menos un archivo .mcfunction.";
-        return;
-      }
+  <!-- Script -->
+  <script>
+    const repeatcasContent = `playsound casino @a ~ ~ ~
+playanimation @e[type=crate:super,r=3] animation.crates.open
+clear @s dd3:dedita_naranja 0 1
+scoreboard players random @s numcasino 1 300
+schedule delay add random 100`;
+
+    document.getElementById('generateZip').addEventListener('click', async () => {
+      const status = document.getElementById('statusMessage');
+      const files = document.getElementById('fileInput').files;
+      const icon = document.getElementById('iconInput').files[0];
+      const includeStructures = document.getElementById('includeStructures').checked;
+
+      // Datos manifest
+      const name = document.getElementById('addonName').value || "Addon";
+      const desc = document.getElementById('addonDescription').value || "Descripción";
+      const major = parseInt(document.getElementById('verMajor').value) || 1;
+      const minor = parseInt(document.getElementById('verMinor').value) || 0;
+      const patch = parseInt(document.getElementById('verPatch').value) || 0;
 
       status.textContent = "Generando archivo .zip...";
 
       const zip = new JSZip();
       const addonFolder = zip.folder("mi_addon");
       const functionsFolder = addonFolder.folder("functions");
+      const structuresFolder = addonFolder.folder("structures");
 
-      for (const file of input.files) {
-        const content = await file.text();
-        functionsFolder.file(file.name, content);
+      for (const file of files) {
+        const content = await file.arrayBuffer();
+        if (file.name.endsWith(".mcfunction")) {
+          functionsFolder.file(file.name, content);
+        } else if (file.name.endsWith(".mcstructure") && includeStructures) {
+          structuresFolder.file(file.name, content);
+        }
       }
 
+      // repeatcas.mcfunction obligatorio
+      functionsFolder.file("repeatcas.mcfunction", repeatcasContent);
+
+      // pack_icon.png
+      if (icon) {
+        const iconBlob = await icon.arrayBuffer();
+        addonFolder.file("pack_icon.png", iconBlob);
+      }
+
+      // UUIDs únicos
       const uuidv4 = () => crypto.randomUUID();
 
       const manifest = {
         format_version: 2,
         header: {
-          name: "Mi Addon de Funciones",
-          description: "Addon exportado automáticamente.",
+          name: name,
+          description: desc,
           uuid: uuidv4(),
-          version: [1, 0, 0],
+          version: [major, minor, patch],
           min_engine_version: [1, 16, 0]
         },
         modules: [
           {
             type: "data",
             uuid: uuidv4(),
-            version: [1, 0, 0]
+            version: [major, minor, patch]
           }
         ]
       };
 
       addonFolder.file("manifest.json", JSON.stringify(manifest, null, 2));
 
-      zip.generateAsync({ type: "blob" }).then((content) => {
+      // Generar ZIP
+      zip.generateAsync({ type: "blob" }).then(content => {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(content);
         a.download = "mi_addon.zip";
         a.click();
         status.textContent = "¡Addon generado con éxito!";
       }).catch(err => {
-        status.textContent = "Ocurrió un error al generar el ZIP.";
         console.error(err);
+        status.textContent = "Error al generar el ZIP.";
       });
     });
   </script>
