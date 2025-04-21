@@ -217,7 +217,7 @@
       percentages.forEach(({ func, prob, index }) => {
         const count = Math.round((prob / 100) * totalLines);
         for (let j = 0; j < count; j++) {
-          lines.push(`execute as @a[scores={numcasino=${index}}] at @s run function ${func}`);
+          lines.push(`execute as @a[scores={casino=${index}}] at @s run function ${func}`);
         }
       });
 
@@ -315,7 +315,7 @@ function processQuickGeneration() {
     const count = Math.round((prob / 100) * totalLines);
 
     for (let j = 0; j < count; j++) {
-      result.push(`execute as @a[scores={numcasino=${i + 1}}] at @s run function ${func}`);
+      result.push(`execute as @s[scores={casino=${i + 1}}] at @s run function ${func}`);
     }
   }
 
